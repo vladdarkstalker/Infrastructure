@@ -3,5 +3,5 @@ data "yandex_vpc_network" "default" {
 }
 
 data "yandex_vpc_subnet" "default" {
-  name = "${data.yandex_vpc_network.default.name}-${var.network_zone}" 
-} 
+  name = "${data.yandex_vpc_network.default.name}-${var.yandex_zone}"
+}

@@ -1,9 +1,14 @@
-output "yandex_vpc_subnets" {
-  description = "Yandex.Cloud Subnets map"
-  value       = data.yandex_vpc_subnet.default
-} 
-
 output "vm_external_ip" {
-  description = "External IP of VM"
-  value       = yandex_compute_instance.vm-1.network_interface[0].nat_ip_address
-} 
+  description = "External IP of the VM"
+  value       = module.vm.external_ip_address
+}
+
+output "vm_id" {
+  description = "ID of the VM"
+  value       = module.vm.instance_id
+}
+
+output "subnet_ids" {
+  description = "Subnets of default network by zone"
+  value       = module.network.subnet_ids
+}

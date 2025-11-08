@@ -1,20 +1,19 @@
-terraform {
-  required_version = ">= 0.13"
+module "network" {
+  source = "./modules/tf-yc-network"
 
-  required_providers {
-    yandex = {
-      source = "yandex-cloud/yandex"
-    }
-  }
+  network_zones = [
+    "ru-central1-a",
+    "ru-central1-b",
+  ]
+}
 
-  backend "s3" {
-    endpoints = { s3 = "https://storage.yandexcloud.net" }
-    bucket = "terraform-state-std-ext-023-27"
-    region = "ru-central1"
-    key    = "terraform.tfstate"
+module "vm" {
+  source = "./modules/tf-yc-instance"
 
-    skip_region_validation        = true
-    skip_credentials_validation   = true
-    skip_requesting_account_id    = true
-  }
+  instance_name           = "chapter5-lesson2-std-ext-023-27"
+  zone                    = var.yandex_zone
+  image_id                = var.image_id
+  subnet_id               = module.network.subnet_ids[var.yandex_zone]
+  ubuntu_public_key_path  = "C:/Users/boffi/.ssh/id_rsa.pub"
+  ansible_public_key_path = "C:/Users/boffi/.ssh/id_ansible.pub"
 }
