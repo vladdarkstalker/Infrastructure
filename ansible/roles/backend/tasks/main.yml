@@ -1,0 +1,7 @@
+- name: Ensure backend service user exists
+  ansible.builtin.include_role:
+    name: backend_user_create
+
+- name: Deploy backend application
+  ansible.builtin.include_role:
+    name: backend_deploy

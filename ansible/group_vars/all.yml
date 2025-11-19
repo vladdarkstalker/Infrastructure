@@ -1,0 +1,6 @@
+# Nexus
+nexus_repo_url: "https://nexus.praktikum-services.tech"
+
+# Target Host
+dev_host: "std-ext-023-27.praktikum-services.tech"
+dev_port: 22

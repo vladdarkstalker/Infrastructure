@@ -1,0 +1,7 @@
+- name: Ensure frontend service user exists
+  ansible.builtin.include_role:
+    name: frontend_user_create
+
+- name: Deploy frontend application
+  ansible.builtin.include_role:
+    name: frontend_deploy
