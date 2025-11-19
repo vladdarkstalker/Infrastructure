@@ -21,12 +21,39 @@
     state: started
     enabled: true
 
+- name: Query Nexus for frontend assets
+  ansible.builtin.uri:
+    url: "{{ nexus_repo_url }}/service/rest/v1/assets?repository={{ nexus_repo_frontend_name }}"
+    url_username: "{{ nexus_repo_user }}"
+    url_password: "{{ nexus_repo_pass }}"
+    method: GET
+    force_basic_auth: true
+    return_content: true
+    status_code: 200
+  register: nexus_frontend_assets
+
+- name: Extract list of frontend versions from asset paths
+  ansible.builtin.set_fact:
+    frontend_versions: >-
+      {{ nexus_frontend_assets.json['items']
+         | map(attribute='path')
+         | map('regex_replace', '^([^/]+)/.*', '\1')
+         | list }}
+
+- name: Set latest frontend version
+  ansible.builtin.set_fact:
+    version: "{{ frontend_versions | sort | last }}"
+
+- name: Debug latest frontend version
+  ansible.builtin.debug:
+    msg: "Latest frontend version = {{ version }}"
+
 - name: Build frontend artefact URL
   ansible.builtin.set_fact:
     frontend_url: >-
       {{ nexus_repo_url.rstrip('/') }}/repository/{{ nexus_repo_frontend_name }}/{{ version }}/frontend-{{ version }}.tar.gz
 
-- name: Ensure base directories for frontend exists
+- name: Ensure base directories for frontend exist
   become: true
   ansible.builtin.file:
     path: "{{ item }}"
@@ -98,6 +125,7 @@
     frontend_old_releases: "{{ frontend_releases_sorted[5:] | default([]) }}"
 
 - name: Remove old frontend releases
+  become: true
   ansible.builtin.file:
     path: "{{ item.path }}"
     state: absent

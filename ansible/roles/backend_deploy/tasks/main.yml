@@ -10,13 +10,13 @@
     url: "{{ nexus_repo_url }}/repository/{{ nexus_repo_backend_name }}/com/yandex/practicum/devops/sausage-store/maven-metadata.xml"
     url_username: "{{ nexus_repo_user }}"
     url_password: "{{ nexus_repo_pass }}"
-    tmp_dest: /tmp/metadata
+    dest: /tmp/metadata
   no_log: true
 
 - name: Read metadata file
   ansible.builtin.slurp:
     src: /tmp/metadata
-    register: metadata_raw
+  register: metadata_raw
 
 - name: Decode metadata content
   ansible.builtin.set_fact:
@@ -24,7 +24,7 @@
 
 - name: Extract latest release version from metadata
   ansible.builtin.set_fact:
-    latest_version: "{{ metadata_content | regex_search('<release>([^<]+)</release>', '\\1') }}"
+    latest_version: "{{ (metadata_content | regex_search('<release>([^<]+)</release>', '\\1'))[0] | trim }}"
 
 - name: Ensure backend directories exist
   become: true
