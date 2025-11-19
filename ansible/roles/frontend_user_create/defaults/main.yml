@@ -1,0 +1,4 @@
+username: www-data
+user_shell: /usr/sbin/nologin
+user_home: /var/www-data
+user_state: present

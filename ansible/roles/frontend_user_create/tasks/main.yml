@@ -1,0 +1,22 @@
+- name: Create Frontend User
+  ansible.builtin.user:
+    name: "{{ username }}"
+    shell: "{{ user_shell }}"
+    state: "{{ user_state }}"
+    home: "{{ user_home }}"
+
+- name: Ensure www-data user exists
+  become: true
+  ansible.builtin.user:
+    name: www-data
+    state: present
+    shell: /usr/sbin/nologin
+
+- name: Ensure /var/www-data exists with correct perms
+  become: true
+  ansible.builtin.file:
+    path: /var/www-data
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"

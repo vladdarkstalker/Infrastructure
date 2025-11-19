@@ -1,0 +1,130 @@
+- name: Install Node.js and npm
+  become: true
+  ansible.builtin.apt:
+    name:
+      - nodejs
+      - npm
+    state: present
+    update_cache: true
+
+- name: Install nginx
+  become: true
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: true
+
+- name: Ensure nginx is enabled and started
+  become: true
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+
+- name: Build frontend artefact URL
+  ansible.builtin.set_fact:
+    frontend_url: >-
+      {{ nexus_repo_url.rstrip('/') }}/repository/{{ nexus_repo_frontend_name }}/{{ version }}/frontend-{{ version }}.tar.gz
+
+- name: Ensure base directories for frontend exists
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ dev_user_front }}"
+    group: "{{ dev_user_front }}"
+    mode: "0755"
+  loop:
+    - /var/www-data/releases
+    - /var/www-data/dist
+
+- name: Ensure release directory for this version exists
+  become: true
+  ansible.builtin.file:
+    path: "/var/www-data/releases/{{ version }}"
+    state: directory
+    owner: "{{ dev_user_front }}"
+    group: "{{ dev_user_front }}"
+    mode: "0755"
+
+- name: Download frontend tarball from Nexus
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ frontend_url }}"
+    url_username: "{{ nexus_repo_user }}"
+    url_password: "{{ nexus_repo_pass }}"
+    dest: "/var/www-data/releases/{{ version }}/frontend.tar.gz"
+    mode: "0644"
+  no_log: true
+
+- name: Extract frontend tarball
+  become: true
+  ansible.builtin.unarchive:
+    src: "/var/www-data/releases/{{ version }}/frontend.tar.gz"
+    dest: "/var/www-data/releases/{{ version }}"
+    remote_src: true
+    owner: "{{ dev_user_front }}"
+    group: "{{ dev_user_front }}"
+
+- name: Remove frontend tarball after extraction
+  become: true
+  ansible.builtin.file:
+    path: "/var/www-data/releases/{{ version }}/frontend.tar.gz"
+    state: absent
+
+- name: Update frontend symlink to current release
+  become: true
+  ansible.builtin.file:
+    src: "/var/www-data/releases/{{ version }}/dist/frontend"
+    dest: "/var/www-data/dist/frontend"
+    state: link
+    owner: "{{ dev_user_front }}"
+    group: "{{ dev_user_front }}"
+
+- name: Find all frontend release directories
+  become: true
+  ansible.builtin.find:
+    paths: /var/www-data/releases
+    file_type: directory
+    depth: 1
+  register: frontend_releases
+
+- name: Sort releases by mtime (newest first)
+  ansible.builtin.set_fact:
+    frontend_releases_sorted: "{{ frontend_releases.files | sort(attribute='mtime', reverse=True) }}"
+
+- name: Select old releases to delete (keep last 5)
+  ansible.builtin.set_fact:
+    frontend_old_releases: "{{ frontend_releases_sorted[5:] | default([]) }}"
+
+- name: Remove old frontend releases
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ frontend_old_releases }}"
+  when: frontend_old_releases | length > 0
+
+- name: Install nginx site config for frontend
+  become: true
+  ansible.builtin.template:
+    src: nginx-frontend.conf.j2
+    dest: /etc/nginx/sites-available/frontend
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload nginx
+
+- name: Enable nginx frontend site
+  become: true
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/frontend
+    dest: /etc/nginx/sites-enabled/frontend
+    state: link
+  notify: Reload nginx
+
+- name: Disable default nginx site
+  become: true
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx

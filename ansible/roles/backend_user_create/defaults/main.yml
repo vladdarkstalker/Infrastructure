@@ -1,0 +1,4 @@
+username: backend
+user_shell: /bin/bash
+user_home: /home/backend
+user_state: present

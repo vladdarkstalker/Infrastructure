@@ -1,0 +1,77 @@
+- name: Install OpenJDK for backend
+  become: true
+  ansible.builtin.apt:
+    name: openjdk-16-jdk
+    state: present
+    update_cache: true
+
+- name: Download Maven metadata from Nexus
+  ansible.builtin.get_url:
+    url: "{{ nexus_repo_url }}/repository/{{ nexus_repo_backend_name }}/com/yandex/practicum/devops/sausage-store/maven-metadata.xml"
+    url_username: "{{ nexus_repo_user }}"
+    url_password: "{{ nexus_repo_pass }}"
+    tmp_dest: /tmp/metadata
+  no_log: true
+
+- name: Read metadata file
+  ansible.builtin.slurp:
+    src: /tmp/metadata
+    register: metadata_raw
+
+- name: Decode metadata content
+  ansible.builtin.set_fact:
+    metadata_content: "{{ metadata_raw.content | b64decode }}"
+
+- name: Extract latest release version from metadata
+  ansible.builtin.set_fact:
+    latest_version: "{{ metadata_content | regex_search('<release>([^<]+)</release>', '\\1') }}"
+
+- name: Ensure backend directories exist
+  become: true
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ dev_user_back }}"
+    group: "{{ dev_user_back }}"
+    mode: "0755"
+  loop:
+    - /opt/sausage-store
+    - /opt/sausage-store/bin
+
+- name: Download latest sausage-store jar from Nexus
+  become: true
+  ansible.builtin.get_url:
+    url: "{{ nexus_repo_url }}/repository/{{ nexus_repo_backend_name }}/com/yandex/practicum/devops/sausage-store/{{ latest_version }}/sausage-store-{{ latest_version }}.jar"
+    url_username: "{{ nexus_repo_user }}"
+    url_password: "{{ nexus_repo_pass }}"
+    dest: "/opt/sausage-store/bin/sausage-store-{{ latest_version }}.jar"
+    mode: '0644'
+  no_log: true
+
+- name: Update symlink to current jar
+  become: true
+  ansible.builtin.file:
+    src: "/opt/sausage-store/bin/sausage-store-{{ latest_version }}.jar"
+    dest: "/opt/sausage-store/bin/sausage-store.jar"
+    state: link
+
+- name: Install sausage-backend systemd service unit
+  become: true
+  ansible.builtin.template:
+    src: sausage-backend.service.j2
+    dest: /etc/systemd/system/sausage-backend.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Reload systemd daemon
+  become: true
+  ansible.builtin.systemd:
+    daemon_reload: yes
+
+- name: Restart backend service
+  become: true
+  ansible.builtin.service:
+    name: sausage-backend.service
+    state: restarted
+    enabled: true
