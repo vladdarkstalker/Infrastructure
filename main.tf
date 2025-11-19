@@ -14,6 +14,6 @@ module "vm" {
   zone                    = var.yandex_zone
   image_id                = var.image_id
   subnet_id               = module.network.subnet_ids[var.yandex_zone]
-  ubuntu_public_key_path  = "C:/Users/boffi/.ssh/id_rsa.pub"
-  ansible_public_key_path = "C:/Users/boffi/.ssh/id_ansible.pub"
+  ubuntu_public_key_path  = ".../.ssh/id_rsa.pub"
+  ansible_public_key_path = ".../.ssh/id_ansible.pub"
 }
