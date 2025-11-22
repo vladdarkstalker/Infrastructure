@@ -1,6 +1,6 @@
 # Infrastructure Deployment Guide
 
-A training terraform project as part of the Yandex course. This project creates a VM in Yandex Cloud using Terraform
+A training terraform and ansible project as part of the Yandex course. This project creates a VM in Yandex Cloud using Terraform
 and deploys the application (backend + frontend) using Ansible.
 
 ---
@@ -90,4 +90,5 @@ When everything is checked, you can delete the VM.:
 ```bash
 terraform destroy -auto-approve
 ```
+
 
